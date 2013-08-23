@@ -9,7 +9,8 @@ using NUnit.Framework;
 using NAnt.Core;
 using Tests.NAnt.Core.Util;
 
-namespace Tests.NAnt.Core.Tasks {
+namespace Tests.NAnt.Core.Tasks
+{
 
     [TestFixture]
     public class SqlplusTaskTest : BuildTestBase
@@ -18,14 +19,15 @@ namespace Tests.NAnt.Core.Tasks {
 
         private const string _invalidDBConnection = "Demo/Dammy@dodo";
 
-        const string _format = @"<?xml version='1.0' ?>
+        private const string _format = @"<?xml version='1.0' ?>
             <project>
-           		<sqlplus  dbconnection= ""EFSCR_NINJA/EFSCR_NINJA@EISP_PROD"" workingdir=""C:\svn\efs\cr\600-Development\5\trunk\900-Pack\03 Version Extras\5.00.147\09. Phone\DB Scripts"" resultproperty=""sqlPlusResult""  failonerror=""false"" debug=""true"">
-			<includeerrorpattern pattern=""ora-""/>
+           		<sqlplus  dbconnection= '{0}' {1} resultproperty='sqlPlusResult'  debug='{2}' failonerror='{3}' >
+			        {4}
 		</sqlplus>
             </project>";
 
-        const string _formatcustomSql = @"<?xml version='1.0' ?>
+
+        private const string _formatcustomSql = @"<?xml version='1.0' ?>
             <project>
 <sqlplus  dbconnection= ""EFSCR_NINJA/EFSCR_NINJA@EISP_PROD"" failonerror=""false"" debug=""false"">
 <includeerrorpattern pattern=""ora-""/>
@@ -41,61 +43,93 @@ namespace Tests.NAnt.Core.Tasks {
     </sqlplus>	
 </project>";
 
-
         /// <summary>Test <arg> option.</summary>
         [Test]
         public void Test_Debug()
         {
             string result = "";
-            result = RunBuild(_format);
+            CopyDataToTemp();
+            result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "true", "false", ""));
         }
 
 
+
         [Test]
-        public void Test_InLine()
+        public void Test_Command_File_Creation_For_WorkingDir()
         {
             string result = "";
-            result = RunBuild(_formatcustomSql);
+            CopyDataToTemp();
+            result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "true", "false", ""));
+            Assert.IsTrue(result.IndexOf("01. CreateTable.sql") != -1,
+                          "Could not Create command file for batch script execution.");
+
+            Assert.IsTrue(
+                result.IndexOf("01. CreateTable.sql") > result.IndexOf("01. SubFolderData\01. Create Dummy Table.sql"),
+                "Scripts in subfolders should be executed first.");
         }
 
-        /// <summary>Test <arg> option.</summary>
+
         [Test]
-        public void Test_ArgOption() {
+        public void Test_InLineSQL_File_Creation()
+        {
             string result = "";
-            if (PlatformHelper.IsWin32) {
-                result = RunBuild(FormatBuildFile("program='cmd.exe'", "<arg value='/c echo Hello, World!'/>"));
-            } else {
-                result = RunBuild(FormatBuildFile("program='echo'", "<arg value='Hello, World!'/>"));
-            }
-            Assert.IsTrue(result.IndexOf("Hello, World!") != -1, "Could not find expected text from external program, <arg> element is not working correctly.");
+       
+            result = RunBuild(FormatBuildFile(_validDbConnection, "", "true", "false", "<sqlscript> <![CDATA[select 1 from dual; /]]></sqlscript>"));
+            Assert.IsTrue(result.IndexOf("tmp.sql") != -1,
+                          "Could not Create temp sql file for inline script.");
         }
 
-        /// <summary>Regression test for bug #461732 - ExternalProgramBase.ExecuteTask() hanging</summary>
-        /// <remarks>
-        /// http://sourceforge.net/tracker/index.php?func=detail&aid=461732&group_id=31650&atid=402868
-        /// </remarks>
+
         [Test]
-        public void Test_ReadLargeAmountFromStdout() {
-
-            // create a text file with A LOT of data
-            string line = "01234567890123456789012345678901234567890123456789012345678901234567890123456789" + Environment.NewLine;
-            StringBuilder contents = new StringBuilder("You can delete this file" + Environment.NewLine);
-            for (int i = 0; i < 250; i++) {
-                contents.Append(line);
+        public void Test_Directory_Script_Execution_NoData()
+        {
+            string result = "";
+            try
+            {
+                result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "false", "true", ""));
+                Assert.Fail("Project should have failed:" + result);
             }
-            string tempFileName = Path.Combine(TempDirName, "bigfile.txt");
-            TempFile.Create(tempFileName);
-
-            if (PlatformHelper.IsWin32) {
-                RunBuild(FormatBuildFile("program='cmd.exe' commandline='/c type &quot;" + tempFileName + "&quot;'", ""));
-            } else {
-                RunBuild(FormatBuildFile("program='cat' commandline=' &quot;" + tempFileName + "&quot;'", ""));
+            catch (TestBuildException be)
+            {
+                Assert.IsTrue(be.InnerException.ToString().IndexOf("There is nothing to execute!!") != -1,
+                    "There should be no data to execute");
             }
-            // if we get here then we passed, ie, no hang = bug fixed
         }
 
-        private string FormatBuildFile(string attributes, string nestedElements) {
-            return String.Format(CultureInfo.InvariantCulture, _format, attributes, nestedElements);
+        [Test]
+        public void Test_Directory_Script_Execution()
+        {
+            string result = "";
+            CopyDataToTemp();
+            result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "false", "true", ""));
+            Assert.IsTrue(result.IndexOf("01. CreateTable.sql") != -1,
+                          "scripts should be ran.");
         }
+
+        private string FormatBuildFile(string dbconnection, string workDir, string debug, string failonerror,
+                                       string nestedElements)
+        {
+            return String.Format(CultureInfo.InvariantCulture, _format, dbconnection, workDir, debug, failonerror,
+                                 nestedElements);
+        }
+
+
+        private static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
+        {
+            foreach (DirectoryInfo dir in source.GetDirectories())
+                CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
+            foreach (FileInfo file in source.GetFiles())
+                file.CopyTo(Path.Combine(target.FullName, file.Name));
+        }
+
+        private void CopyDataToTemp()
+        {
+            var target = new DirectoryInfo(TempDirName);
+            var root = target.CreateSubdirectory("TestData");
+            CopyFilesRecursively(new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory + "\\TestData"), root);
+        }
+
+
+
     }
 }

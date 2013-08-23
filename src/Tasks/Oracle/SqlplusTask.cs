@@ -10,12 +10,13 @@ using NAnt.Core;
 using NAnt.Core.Attributes;
 using NAnt.Core.Tasks;
 using NAnt.Core.Types;
+using NantXtrasTasks.Tasks.Abstract;
 using NantXtrasTasks.Utils;
 
 namespace NantXtrasTasks.Tasks.Oracle
 {
     [TaskName("sqlplus")]
-    public class SqlplusTask : ExternalProgramBase
+    public class SqlplusTask : ExternalProgramScannerBase
     {
         public SqlplusTask()
         {
@@ -23,28 +24,6 @@ namespace NantXtrasTasks.Tasks.Oracle
 
         }
 
-
-
-        public class ExcludeError : Element
-        {
-            private string _pattern;
-
-            /// <summary>
-            /// The pattern or file name to exclude.
-            /// </summary>
-            [TaskAttribute("pattern", Required = true)]
-            [StringValidator(AllowEmpty = false)]
-            public virtual string Pattern
-            {
-                get { return _pattern; }
-                set { _pattern = value; }
-            }
-
-        }
-
-        public class IncludeError : ExcludeError
-        {
-        }
 
         private string wrapperSQL = @"set linesize 1000
 set verify off
@@ -125,63 +104,11 @@ quit;";
             }
         }
 
-        private FileInfo _output;
-        private bool _outputAppend;
-        private string _resultProperty;
         private string _dbconnection;
-        private EnvironmentSet _environmentSet = new EnvironmentSet();
         private DirectoryInfo _workingDirectory;
         private bool _debug;
-        private List<string> _includeErrorPatterns = new List<string>();
-        private List<string> _excludeErrorPatterns = new List<string>();
         private RawXml _sqlScript = null;
 
-        [BuildElementArray("includeerrorpattern")]
-        public IncludeError[] IncludeErrorPattern
-        {
-            set
-            {
-                foreach (IncludeError includeErrorPattern in value)
-                {
-                    _includeErrorPatterns.Add(includeErrorPattern.Pattern);
-                }
-            }
-
-        }
-
-
-
-
-        [BuildElementArray("excludeerrorpattern")]
-        public ExcludeError[] ExcludeErrorPattern
-        {
-            set
-            {
-                foreach (ExcludeError excludeErrorPattern in value)
-                {
-                    _excludeErrorPatterns.Add(excludeErrorPattern.Pattern);
-                }
-            }
-        }
-
-        /// <summary>
-        /// <para>
-        /// The name of a property in which the exit code of the program should 
-        /// be stored. Only of interest if <see cref="Task.FailOnError" /> is 
-        /// <see langword="false" />.
-        /// </para>
-        /// <para>
-        /// If the exit code of the program is "-1000" then the program could 
-        /// not be started, or did not exit (in time).
-        /// </para>
-        /// </summary>
-        [TaskAttribute("resultproperty")]
-        [StringValidator(AllowEmpty = false)]
-        public string ResultProperty
-        {
-            get { return _resultProperty; }
-            set { _resultProperty = value; }
-        }
 
         [TaskAttribute("debug")]
         [BooleanValidator()]
@@ -200,59 +127,7 @@ quit;";
             set { _dbconnection = value; }
         }
 
-        /// <summary>
-        /// Gets or sets a value indicating whether the application should be
-        /// spawned. If you spawn an application, its output will not be logged
-        /// by NAnt. The default is <see langword="false" />.
-        /// </summary>
-        //[TaskAttribute("spawn")]
-        //public override bool Spawn
-        //{
-        //    get { return base.Spawn; }
-        //    set { base.Spawn = value; }
-        //}
-
-        /// <summary>
-        /// The name of a property in which the unique identifier of the spawned
-        /// application should be stored. Only of interest if <see cref="Spawn" />
-        /// is <see langword="true" />.
-        /// </summary>
-        //[TaskAttribute("pidproperty")]
-        //[StringValidator(AllowEmpty = false)]
-        //public string ProcessIdProperty
-        //{
-        //    get { return _processIdProperty; }
-        //    set { _processIdProperty = value; }
-        //}
-
-        /// <summary>
-        /// The file to which the standard output will be redirected.
-        /// </summary>
-        /// <remarks>
-        /// By default, the standard output is redirected to the console.
-        /// </remarks>
-        [TaskAttribute("output")]
-        public override FileInfo Output
-        {
-            get { return _output; }
-            set { _output = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether output should be appended 
-        /// to the output file. The default is <see langword="false" />.
-        /// </summary>
-        /// <value>
-        /// <see langword="true" /> if output should be appended to the <see cref="Output" />; 
-        /// otherwise, <see langword="false" />.
-        /// </value>
-        [TaskAttribute("append")]
-        public override bool OutputAppend
-        {
-            get { return _outputAppend; }
-            set { _outputAppend = value; }
-        }
-
+    
         private string RunSqlPath
         {
             get
@@ -318,122 +193,13 @@ quit;";
 
         enum execMode
         {
+            None,
             Directory,
             InLine
         }
 
         private execMode _execMode;
-        /// <summary>
-        /// Performs additional checks after the task has been initialized.
-        /// </summary>
-        /// <exception cref="BuildException"><see cref="FileName" /> does not hold a valid file name.</exception>
-        protected override void Initialize()
-        {
-            base.Initialize();
-            //ErrorWriter = new LogWriter(this, Level.Info,
-            //                            CultureInfo.InvariantCulture);
 
-            //OutputWriter = new LogWriter(this, Level.Info,
-            //                             CultureInfo.InvariantCulture);
-
-            ErrorWriter = new ScanningTextWriter(this,_includeErrorPatterns,_excludeErrorPatterns);
-
-            OutputWriter = new ScanningTextWriter(this, _includeErrorPatterns, _excludeErrorPatterns);
-
-            if (!WorkingDirectory.Exists)
-            {
-                return;
-            }
-
-            cleanup();
-
-            string filesToRun = "";
-            if (SqlScript!=null && !string.IsNullOrEmpty(SqlScript.Xml.InnerText))
-            {
-                string sqlToExecute = wrapperSQLInLine.Replace("<<sqlScript>>", SqlScript.Xml.InnerText);
-                File.WriteAllText(TempSQLFile, sqlToExecute);
-                _execMode = execMode.InLine;
-            }
-            else
-            {
-                FileSet fset = new FileSet();
-                fset.BaseDirectory = WorkingDirectory;
-                fset.Includes.Add(@"**\*.sql");
-                fset.Includes.Add(@"**\*.prc");
-                fset.Includes.Add(@"**\*.pkg");
-
-                foreach (string fileName in fset.FileNames)
-                {
-                    filesToRun += string.Format(@"START RUNFILE.SQL ""{0}""{1}", fileName, Environment.NewLine);
-                }
-                filesToRun += "quit;" + Environment.NewLine;
-                Log(Level.Verbose, "Creating runscripts file: " + RunScriptsPath);
-                //save runsqlfile
-                File.WriteAllText(RunScriptsPath, filesToRun);
-                Log(Level.Verbose, "Creating runfile: " + RunSqlPath);
-                //save runsqlfile
-                File.WriteAllText(RunSqlPath, wrapperSQL);
-                _execMode = execMode.Directory;
-            }
-
-
-        }
-
-       
-    
-
-
-    /// <summary>
-        /// Executes the external program.
-        /// </summary>
-        protected override void ExecuteTask()
-    {
-        Log(Level.Info, "Executing Scripts in: " + WorkingDirectory);
-        if (Debug)
-        {
-            Log(Level.Info, Environment.NewLine+ "Debug mode, the following files would be executed in running mode:");
-            Log(Level.Info, File.ReadAllText(RunScriptsPath));
-            if (ResultProperty != null)
-            {
-                Properties[ResultProperty] = (-1001).ToString();
-            }
-            return;
-        }
-
-        base.ExecuteTask();
-
-
-        if (ResultProperty != null)
-        {
-            Properties[ResultProperty] = base.ExitCode.ToString(
-                CultureInfo.InvariantCulture);
-        }
-
-        if (!Debug)
-        {
-            cleanup();
-        }
-        ScanningTextWriter err = (ScanningTextWriter) ErrorWriter;
-        ScanningTextWriter outw = (ScanningTextWriter)OutputWriter;
-        if (string.IsNullOrEmpty(err.Errors) && string.IsNullOrEmpty(outw.Errors))
-        {
-            Log(Level.Info, "Scripts Executed in: " + WorkingDirectory);
-            
-        }else
-        {
-            string errMsg = "Critical errors found executing Scripts in Directory: " + WorkingDirectory +":"+ Environment.NewLine;
-            errMsg += err.Errors;
-            errMsg += outw.Errors;
-            if (ResultProperty != null)
-            {
-                Properties[ResultProperty] = (-1001).ToString();
-            }
-            throw new BuildException(errMsg);
-            
-        }
-
-
-    }
 
         /// <summary>
         /// The directory in which the command will be executed.
@@ -474,14 +240,116 @@ quit;";
             set { _sqlScript = value; }
         }
 
+        /// <summary>
+        /// Performs additional checks after the task has been initialized.
+        /// </summary>
+        /// <exception cref="BuildException"><see cref="FileName" /> does not hold a valid file name.</exception>
+        protected override void Initialize()
+        {
+            base.Initialize();
+
+
+            if (!WorkingDirectory.Exists)
+            {
+                _execMode =execMode.None;
+                return;
+            }
+
+            cleanup();
+
+            string filesToRun = "";
+            if (SqlScript != null && !string.IsNullOrEmpty(SqlScript.Xml.InnerText))
+            {
+                string sqlToExecute = wrapperSQLInLine.Replace("<<sqlScript>>", SqlScript.Xml.InnerText);
+                File.WriteAllText(TempSQLFile, sqlToExecute);
+                _execMode = SqlplusTask.execMode.InLine;
+            }
+            else
+            {
+                FileSet fset = new FileSet();
+                fset.BaseDirectory = WorkingDirectory;
+                fset.Includes.Add(@"**\*.sql");
+                fset.Includes.Add(@"**\*.prc");
+                fset.Includes.Add(@"**\*.pkg");
+
+                foreach (string fileName in fset.FileNames)
+                {
+                    filesToRun += string.Format(@"START RUNFILE.SQL ""{0}""{1}", fileName, Environment.NewLine);
+                }
+
+                if (filesToRun.Length ==0)
+                {
+                    _execMode = execMode.None;
+                    return;
+                }
+                filesToRun += "quit;" + Environment.NewLine;
+                Log(Level.Verbose, "Creating runscripts file: " + RunScriptsPath);
+                //save runsqlfile
+                File.WriteAllText(RunScriptsPath, filesToRun);
+                Log(Level.Verbose, "Creating runfile: " + RunSqlPath);
+                //save runsqlfile
+                File.WriteAllText(RunSqlPath, wrapperSQL);
+                _execMode = SqlplusTask.execMode.Directory;
+            }
+
+
+        }
+
 
         /// <summary>
-        /// Environment variables to pass to the program.
+        /// Executes the external program.
         /// </summary>
-        [BuildElement("environment")]
-        public EnvironmentSet EnvironmentSet
+        protected override void ExecuteTask()
         {
-            get { return _environmentSet; }
+
+            Log(Level.Info, "Executing Scripts in: " + WorkingDirectory);
+            if (Debug)
+            {
+                switch (_execMode)
+                {
+                    case execMode.Directory:
+                        Log(Level.Info, Environment.NewLine + "Debug mode, the following files would be executed in running mode:");
+                        Log(Level.Info, File.ReadAllText(RunScriptsPath));
+                        break;
+                    case execMode.InLine:
+                        Log(Level.Info, Environment.NewLine + "Debug mode, the inline script converted to the following file:");
+                        Log(Level.Info, TempSQLFile);
+                        break;
+                   default:
+                        throw new ArgumentOutOfRangeException();
+                }
+                if (ResultProperty != null)
+                {
+                    Properties[ResultProperty] = 0.ToString();
+                }
+                return;
+            }
+
+            if (_execMode == execMode.None)
+            {
+                throw new BuildException("There is nothing to execute!!!");
+            }
+
+            try
+            {
+                base.ExecuteTask();
+                Log(Level.Info, "Scripts Executed in: " + WorkingDirectory);
+
+            }
+            catch (Exception ex)
+            {
+                Log(Level.Error, "Failed to Execute Scripts in: " + WorkingDirectory);
+                throw ex;
+            } finally
+            {
+
+                if (!Debug)
+                {
+                    cleanup();
+                }  
+            }
+           
+
         }
 
         protected override void PrepareProcess(System.Diagnostics.Process process)
@@ -491,22 +359,7 @@ quit;";
             // set working directory specified by user
             process.StartInfo.WorkingDirectory = WorkingDirectory.FullName;
 
-            // set environment variables
 
-            foreach (EnvironmentVariable variable in EnvironmentSet.EnvironmentVariables)
-            {
-                if (variable.IfDefined && !variable.UnlessDefined)
-                {
-                    if (variable.Value == null)
-                    {
-                        process.StartInfo.EnvironmentVariables[variable.VariableName] = "";
-                    }
-                    else
-                    {
-                        process.StartInfo.EnvironmentVariables[variable.VariableName] = variable.Value;
-                    }
-                }
-            }
         }
     }
 }

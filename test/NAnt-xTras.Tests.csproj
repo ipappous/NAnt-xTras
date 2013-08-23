@@ -7,8 +7,8 @@
     <ProjectGuid>{24346159-5EAB-4173-96E8-FB72B1F5258C}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>NantXtras.Tests</RootNamespace>
-    <AssemblyName>NantXtras.Tests</AssemblyName>
+    <RootNamespace>NAntxTras.Tests</RootNamespace>
+    <AssemblyName>NAnt-xTras.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -71,6 +71,23 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="TestData\01. CreateTable.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestData\01. SubFolderData\01. Create Dummy Table.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestData\01. SubFolderData\02. Alter Dummy Table.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Include="TestData\01. SubFolderData\03. Create insert SP.prc">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <Content Include="TestData\01. SubFolderData\04. Insert Data to Dummy.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

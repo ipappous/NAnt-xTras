@@ -1,4 +1,4 @@
-﻿create or replace procedure insertdummy(anum in NUMBER, astring in nvarchar2) is
+create or replace procedure insertdummy(anum in NUMBER, astring in nvarchar2) is
 begin
   insert into dummy
     (id, dummyint, name)

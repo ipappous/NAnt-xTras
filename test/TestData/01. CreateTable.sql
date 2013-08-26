@@ -1,4 +1,4 @@
-﻿-- Create table
+-- Create table
 create table anotherdummy
 (
   id       number(38),

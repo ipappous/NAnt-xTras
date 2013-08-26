@@ -38,7 +38,7 @@ end;
 set verify on
 set feedback 1
 
-@@""&1""
+@""&1""
 
 set verify off
 set feedback 0

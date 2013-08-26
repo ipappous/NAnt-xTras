@@ -123,6 +123,32 @@ end;
                           "ORA-12154: TNS should be invalid");
         }
 
+             [Test]
+                public void Test_InLineSQL_execution_()
+        {
+            string nested =
+@"<includeerrorpattern pattern='sp2-'/>
+<sqlscript> <![CDATA[
+    DATAFILE
+  'D:\APP\ARJU\ORADATA\A\SYSTEM01.DBF',
+  'D:\APP\ARJU\ORADATA\A\SYSAUX01.DBF',
+  'D:\APP\ARJU\ORADATA\A\UNDOTBS01.DBF',
+  'D:\APP\ARJU\ORADATA\A\USERS01.DBF',
+  'D:\APP\ARJU\PRODUCT\11.1.0\DB_1\DATABASE\DATA01.DBF',
+  'F:\MIGRATE_TO_ASM.DBF'
+CHARACTER SET WE8MSWIN1252;
+/
+]]></sqlscript>
+<arg value='69' />";
+
+            string result = "";
+
+            result = RunBuild(FormatBuildFile(_validDbConnection, "", "false", "false", nested));
+            Assert.IsTrue(result.IndexOf("Critical errors found during the execution of") != -1,
+                          "Critical errors should be scanned from the output.");
+        }
+
+
 
         [Test]
         public void Test_InLineSQL_execution_withArg()

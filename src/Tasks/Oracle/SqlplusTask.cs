@@ -24,8 +24,19 @@ namespace NantXtras.Tasks.Oracle
 
         }
 
+        #region Private Instance Fields
 
-        private string wrapperSQL = @"set linesize 1000
+        private string _dbconnection;
+        private DirectoryInfo _workingDirectory;
+        private bool _debug;
+        private RawXml _sqlScript = null;
+        private FileSet _fileset = null;
+
+        #endregion Private Instance Fields
+
+        #region Private Static Fields
+
+        const string wrapperSQL = @"set linesize 1000
 set verify off
 set feedback 0
 set serveroutput on size 1000000
@@ -55,7 +66,7 @@ set verify on
 set feedback 1";
 
 
-        private string wrapperSQLInLine = @"set linesize 1000
+        const string wrapperSQLInLine = @"set linesize 1000
 set verify off
 set feedback 0
 set serveroutput on size 1000000
@@ -86,28 +97,11 @@ set feedback 1
 
 quit;";
 
+        #endregion Private Static Fields
 
-        public override string ProgramArguments
-        {
-            get
-            {
-                switch (_execMode)
-                {
-                    case execMode.Directory:
-                        return string.Format(" {0} @\"{1}\" ", DBConnection, RunScriptsPath);
-                    case execMode.InLine:
-                        return string.Format(" {0} @\"{1}\" ", DBConnection, TempSQLFile);
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-                
-            }
-        }
 
-        private string _dbconnection;
-        private DirectoryInfo _workingDirectory;
-        private bool _debug;
-        private RawXml _sqlScript = null;
+
+
 
 
         [TaskAttribute("debug")]
@@ -127,7 +121,18 @@ quit;";
             set { _dbconnection = value; }
         }
 
-    
+
+        /// <summary>
+        /// Used to select the files to copy. To use a <see cref="FileSet" />, 
+        /// the <see cref="ToDirectory" /> attribute must be set.
+        /// </summary>
+        [BuildElement("fileset")]
+        public virtual FileSet ExecuteFileSet
+        {
+            get { return _fileset; }
+            set { _fileset = value; }
+        }
+
         private string RunSqlPath
         {
             get
@@ -195,6 +200,7 @@ quit;";
         {
             None,
             Directory,
+            FileSet, 
             InLine
         }
 
@@ -266,11 +272,22 @@ quit;";
             }
             else
             {
-                FileSet fset = new FileSet();
-                fset.BaseDirectory = WorkingDirectory;
-                fset.Includes.Add(@"**\*.sql");
-                fset.Includes.Add(@"**\*.prc");
-                fset.Includes.Add(@"**\*.pkg");
+                FileSet fset = null;
+                if (_fileset != null)
+                {
+                    fset = ExecuteFileSet;
+                    _execMode = SqlplusTask.execMode.FileSet;
+                }
+                else
+                {
+                    fset = new FileSet();
+                    fset.BaseDirectory = WorkingDirectory;
+                    fset.Includes.Add(@"**\*.sql");
+                    fset.Includes.Add(@"**\*.prc");
+                    fset.Includes.Add(@"**\*.pkg");
+                    _execMode = SqlplusTask.execMode.Directory;
+
+                }
 
                 foreach (string fileName in fset.FileNames)
                 {
@@ -289,12 +306,28 @@ quit;";
                 Log(Level.Verbose, "Creating runfile: " + RunSqlPath);
                 //save runsqlfile
                 File.WriteAllText(RunSqlPath, wrapperSQL);
-                _execMode = SqlplusTask.execMode.Directory;
             }
 
 
         }
 
+        public override string ProgramArguments
+        {
+            get
+            {
+                switch (_execMode)
+                {
+                    case execMode.Directory:
+                    case execMode.FileSet:
+                        return string.Format(" {0} @\"{1}\" ", DBConnection, RunScriptsPath);
+                    case execMode.InLine:
+                        return string.Format(" {0} @\"{1}\" ", DBConnection, TempSQLFile);
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+            }
+        }
 
         /// <summary>
         /// Executes the external program.
@@ -307,7 +340,11 @@ quit;";
             {
                 switch (_execMode)
                 {
-                    case execMode.Directory:
+                        case  execMode.FileSet:
+                        Log(Level.Info, Environment.NewLine + "Debug mode, the following files would be selected from File Set and executed:");
+                        Log(Level.Info, File.ReadAllText(RunScriptsPath));
+                        break;
+                        case execMode.Directory:
                         Log(Level.Info, Environment.NewLine + "Debug mode, the following files would be executed in running mode:");
                         Log(Level.Info, File.ReadAllText(RunScriptsPath));
                         break;

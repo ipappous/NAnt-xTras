@@ -40,7 +40,29 @@ namespace NantXtras.Tasks.Abstract
         #endregion Private Static Fields
 
         #region Public Instance Properties
-        
+
+
+        public class ExcludeError : Element
+        {
+            private string _pattern;
+
+            /// <summary>
+            /// The pattern or file name to exclude.
+            /// </summary>
+            [TaskAttribute("pattern", Required = true)]
+            [StringValidator(AllowEmpty = false)]
+            public virtual string Pattern
+            {
+                get { return _pattern; }
+                set { _pattern = value; }
+            }
+
+        }
+
+        public class IncludeError : ExcludeError
+        {
+        }
+
         [BuildElementArray("includeerrorpattern")]
         public IncludeError[] IncludeErrorPattern
         {
@@ -97,13 +119,53 @@ namespace NantXtras.Tasks.Abstract
 
         #region Override implementation of Task
 
-        #endregion Override implementation of Task
+        /// <summary>
+        /// Performs additional checks after the task has been initialized.
+        /// </summary>
+        /// <exception cref="BuildException"><see cref="FileName" /> does not hold a valid file name.</exception>
+        protected override void Initialize()
+        {
+            base.Initialize();
 
-        #region Public Instance Methods
+            ErrorWriter = new ScanningTextWriter(this, _includeErrorPatterns, _excludeErrorPatterns);
 
-        #endregion Public Instance Methods
+            OutputWriter = new ScanningTextWriter(this, _includeErrorPatterns, _excludeErrorPatterns);
 
-        #region Protected Instance Methods
+
+        }
+
+        /// <summary>
+        /// Executes the external program.
+        /// </summary>
+        protected override void ExecuteTask()
+        {
+
+            base.ExecuteTask();
+
+
+            if (ResultProperty != null)
+            {
+                Properties[ResultProperty] = base.ExitCode.ToString(
+                    CultureInfo.InvariantCulture);
+            }
+
+            ScanningTextWriter err = (ScanningTextWriter)ErrorWriter;
+            ScanningTextWriter outw = (ScanningTextWriter)OutputWriter;
+            if (!string.IsNullOrEmpty(err.Errors) || !string.IsNullOrEmpty(outw.Errors))
+            {
+                string errMsg = "Critical errors found during the execution of : " + ExeName + " " + ProgramArguments + ":" + Environment.NewLine;
+                errMsg += err.Errors;
+                errMsg += outw.Errors;
+                if (ResultProperty != null)
+                {
+                    Properties[ResultProperty] = FailedExitCode.ToString();
+                }
+                throw new BuildException(errMsg);
+
+            }
+
+
+        }
 
         /// <summary>
         /// Updates the <see cref="ProcessStartInfo" /> of the specified 
@@ -131,77 +193,13 @@ namespace NantXtras.Tasks.Abstract
             }
         }
 
+        #endregion Override implementation of Task
 
-        public class ExcludeError : Element
-        {
-            private string _pattern;
+        #region Public Instance Methods
 
-            /// <summary>
-            /// The pattern or file name to exclude.
-            /// </summary>
-            [TaskAttribute("pattern", Required = true)]
-            [StringValidator(AllowEmpty = false)]
-            public virtual string Pattern
-            {
-                get { return _pattern; }
-                set { _pattern = value; }
-            }
+        #endregion Public Instance Methods
 
-        }
-
-        public class IncludeError : ExcludeError
-        {
-        }
-
-        /// <summary>
-        /// Performs additional checks after the task has been initialized.
-        /// </summary>
-        /// <exception cref="BuildException"><see cref="FileName" /> does not hold a valid file name.</exception>
-        protected override void Initialize()
-        {
-            base.Initialize();
-
-            ErrorWriter = new ScanningTextWriter(this,_includeErrorPatterns,_excludeErrorPatterns);
-
-            OutputWriter = new ScanningTextWriter(this, _includeErrorPatterns, _excludeErrorPatterns);
-
-
-        }
-
-        /// <summary>
-        /// Executes the external program.
-        /// </summary>
-        protected override void ExecuteTask()
-        {
-
-            base.ExecuteTask();
-
-
-            if (ResultProperty != null)
-            {
-                Properties[ResultProperty] = base.ExitCode.ToString(
-                    CultureInfo.InvariantCulture);
-            }
-
-            ScanningTextWriter err = (ScanningTextWriter) ErrorWriter;
-            ScanningTextWriter outw = (ScanningTextWriter)OutputWriter;
-            if (!string.IsNullOrEmpty(err.Errors) || !string.IsNullOrEmpty(outw.Errors))
-            {
-                string errMsg = "Critical errors found during the execution of : " + ExeName + " " + ProgramArguments + ":" + Environment.NewLine;
-                errMsg += err.Errors;
-                errMsg += outw.Errors;
-                if (ResultProperty != null)
-                {
-                    Properties[ResultProperty] = FailedExitCode.ToString();
-                }
-                throw new BuildException(errMsg);
-            
-            }
-
-
-        }
-    
-
+        #region Protected Instance Methods
       
         #endregion Protected Instance Methods
 

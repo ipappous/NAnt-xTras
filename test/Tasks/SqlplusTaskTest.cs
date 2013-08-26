@@ -212,6 +212,44 @@ end;
         }
 
 
+        [Test] public void Test_Directory_Script_FileSet()
+        {
+            string result = "";
+            string nested =
+@"			<includeerrorpattern pattern='ora-'/>
+			<excludeerrorpattern pattern='ora-00955'/>
+			<fileset basedir='TestData'>
+				<include name='**\*.sql'/>
+				<include name='**\*.prc'/>
+				<include name='**\*.pkg'/>
+				<exclude name='**\*Dummy*'/>
+			</fileset>
+";
+            CopyDataToTemp();
+            result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "true", "false", nested));
+            Assert.IsFalse(result.IndexOf("Dummy") != -1,
+                          "should exclude Dummy files");
+        }
+
+        [Test]
+        public void Test_Directory_Script_FileSet_execute()
+        {
+            string result = "";
+            string nested =
+@"			<includeerrorpattern pattern='ora-'/>
+			<excludeerrorpattern pattern='ora-00955'/>
+			<fileset basedir='TestData'>
+				<include name='**\*.sql'/>
+				<include name='**\*.prc'/>
+				<include name='**\*.pkg'/>
+				<exclude name='**\*Dummy*'/>
+			</fileset>
+";
+            CopyDataToTemp();
+            result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "false", "false", nested));
+            Assert.IsFalse(result.IndexOf("Dummy") != -1,
+                          "should exclude Dummy files");
+        }
 
         private string FormatBuildFile(string dbconnection, string workDir, string debug, string failonerror,
                                        string nestedElements)

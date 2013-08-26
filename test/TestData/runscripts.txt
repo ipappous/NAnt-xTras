@@ -1,0 +1,3 @@
+START RUNFILE.SQL "F:\GitTests\NAnt-xTras\test\TestData\01. SubFolderData\03. Create insert SP.prc"
+START RUNFILE.SQL "F:\GitTests\NAnt-xTras\test\TestData\01. CreateTable.sql"
+quit;

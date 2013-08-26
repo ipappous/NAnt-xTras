@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using NAnt.Core;
 using NAnt.Core.Attributes;
-using NantXtrasTasks.Utils;
+using NantXtras.Utils;
 
-namespace NantXtrasTasks.Tasks
+namespace NantXtras.Tasks.Util
 {
     [TaskName("call_uri")]
     internal class CallURITask : Task

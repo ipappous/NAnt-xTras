@@ -10,10 +10,10 @@ using NAnt.Core;
 using NAnt.Core.Attributes;
 using NAnt.Core.Tasks;
 using NAnt.Core.Types;
-using NantXtrasTasks.Tasks.Abstract;
-using NantXtrasTasks.Utils;
+using NantXtras.Tasks.Abstract;
+using NantXtras.Utils;
 
-namespace NantXtrasTasks.Tasks.Oracle
+namespace NantXtras.Tasks.Oracle
 {
     [TaskName("sqlplus")]
     public class SqlplusTask : ExternalProgramScannerBase

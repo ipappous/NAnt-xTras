@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using NAnt.Core;
 
-namespace NantXtrasTasks.Utils
+namespace NantXtras.Utils
 {
     class ScanningTextWriter :TextWriter
     {

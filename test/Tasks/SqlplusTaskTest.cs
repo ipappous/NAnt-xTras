@@ -7,9 +7,10 @@ using System.Globalization;
 
 using NUnit.Framework;
 using NAnt.Core;
+using Tests.NAnt.Core;
 using Tests.NAnt.Core.Util;
 
-namespace Tests.NAnt.Core.Tasks
+namespace NAntxTras.Tests.Tasks.Oracle
 {
 
     [TestFixture]

@@ -5,7 +5,7 @@ using Tests.NAnt.Core;
 using System.Globalization;
 
 
-namespace NantXtras.Tests.Tasks.Util
+namespace NAntxTras.Tests.Tasks.Util
 {
 
     [TestFixture]

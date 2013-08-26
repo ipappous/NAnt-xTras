@@ -2,17 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text;
+
 using NAnt.Core;
 using NAnt.Core.Attributes;
 using NAnt.Core.Tasks;
 using NAnt.Core.Types;
-using NantXtrasTasks.Tasks.Oracle;
-using NantXtrasTasks.Utils;
 
-namespace NantXtrasTasks.Tasks.Abstract
+using NantXtras.Utils;
+
+namespace NantXtras.Tasks.Abstract
 {
     [Serializable()]
     public abstract class ExternalProgramScannerBase : ExternalProgramBase

@@ -24,6 +24,14 @@ namespace NantXtras.Tasks.Oracle
 
         }
 
+        enum execMode
+        {
+            None,
+            Directory,
+            FileSet,
+            InLine
+        }
+
         #region Private Instance Fields
 
         private string _dbconnection;
@@ -31,6 +39,7 @@ namespace NantXtras.Tasks.Oracle
         private bool _debug;
         private RawXml _sqlScript = null;
         private FileSet _fileset = null;
+        private execMode _execMode;
 
         #endregion Private Instance Fields
 
@@ -99,9 +108,33 @@ quit;";
 
         #endregion Private Static Fields
 
+        #region Public Instance Properties
+
+        [TaskAttribute("workingdir")]
+        public DirectoryInfo WorkingDirectory
+        {
+            get
+            {
+                if (_workingDirectory == null)
+                {
+                    return base.BaseDirectory;
+                }
+                return _workingDirectory;
+            }
+            set { _workingDirectory = value; }
+        }
 
 
-
+        /// <summary>
+        /// The sql script to execute, for inline execution
+        /// if that is defined then only this code would be executed. 
+        /// </summary>
+        [BuildElement("sqlscript")]
+        public RawXml SqlScript
+        {
+            get { return _sqlScript; }
+            set { _sqlScript = value; }
+        }
 
 
         [TaskAttribute("debug")]
@@ -121,17 +154,18 @@ quit;";
             set { _dbconnection = value; }
         }
 
-
-        /// <summary>
-        /// Used to select the files to copy. To use a <see cref="FileSet" />, 
-        /// the <see cref="ToDirectory" /> attribute must be set.
-        /// </summary>
         [BuildElement("fileset")]
         public virtual FileSet ExecuteFileSet
         {
             get { return _fileset; }
             set { _fileset = value; }
         }
+
+
+        #endregion Public Instance Properties
+        
+        #region Private Instance Methods
+
 
         private string RunSqlPath
         {
@@ -196,55 +230,12 @@ quit;";
             
         }
 
-        enum execMode
-        {
-            None,
-            Directory,
-            FileSet, 
-            InLine
-        }
+        #endregion Private Instance Methods
 
-        private execMode _execMode;
+        #region Override implementation of Task
+        
 
 
-        /// <summary>
-        /// The directory in which the command will be executed.
-        /// </summary>
-        /// <value>
-        /// The directory in which the command will be executed. The default 
-        /// is the project's base directory.
-        /// </value>
-        /// <remarks>
-        /// <para>
-        /// The working directory will be evaluated relative to the project's
-        /// base directory if it is relative.
-        /// </para>
-        /// </remarks>
-        [TaskAttribute("workingdir")]
-        public DirectoryInfo WorkingDirectory
-        {
-            get
-            {
-                if (_workingDirectory == null)
-                {
-                    return base.BaseDirectory;
-                }
-                return _workingDirectory;
-            }
-            set { _workingDirectory = value; }
-        }
-
-
-        /// <summary>
-        /// The sql script to execute, for inline execution
-        /// if that is defined then only this code would be executed. 
-        /// </summary>
-        [BuildElement("sqlscript")]
-        public RawXml SqlScript
-        {
-            get { return _sqlScript; }
-            set { _sqlScript = value; }
-        }
 
         /// <summary>
         /// Performs additional checks after the task has been initialized.
@@ -398,5 +389,7 @@ quit;";
 
 
         }
+
+        #endregion Override implementation of Task
     }
 }

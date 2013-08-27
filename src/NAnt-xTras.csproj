@@ -44,6 +44,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Tasks\Abstract\ExternalProgramScannerBase.cs" />
+    <Compile Include="Tasks\Oracle\impdpTask.cs" />
+    <Compile Include="Tasks\Oracle\expdpTask.cs" />
     <Compile Include="Tasks\Util\CallURITask.cs" />
     <Compile Include="Tasks\Oracle\SqlplusTask.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

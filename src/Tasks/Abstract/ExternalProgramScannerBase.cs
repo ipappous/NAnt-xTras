@@ -140,29 +140,47 @@ namespace NantXtras.Tasks.Abstract
         protected override void ExecuteTask()
         {
 
-            base.ExecuteTask();
-
-
-            if (ResultProperty != null)
+            Exception theEx = null;
+            try
             {
-                Properties[ResultProperty] = base.ExitCode.ToString(
-                    CultureInfo.InvariantCulture);
-            }
+                base.ExecuteTask();
 
-            ScanningTextWriter err = (ScanningTextWriter)ErrorWriter;
-            ScanningTextWriter outw = (ScanningTextWriter)OutputWriter;
-            if (!string.IsNullOrEmpty(err.Errors) || !string.IsNullOrEmpty(outw.Errors))
-            {
-                string errMsg = "Critical errors found during the execution of : " + ExeName + " " + ProgramArguments + ":" + Environment.NewLine;
-                errMsg += err.Errors;
-                errMsg += outw.Errors;
+
                 if (ResultProperty != null)
                 {
-                    Properties[ResultProperty] = FailedExitCode.ToString();
+                    Properties[ResultProperty] = base.ExitCode.ToString(
+                        CultureInfo.InvariantCulture);
                 }
-                throw new BuildException(errMsg);
 
             }
+            catch (Exception ex)
+            {
+                theEx = ex;
+            }
+            finally
+            {
+                ScanningTextWriter err = (ScanningTextWriter) ErrorWriter;
+                ScanningTextWriter outw = (ScanningTextWriter) OutputWriter;
+                if (!string.IsNullOrEmpty(err.Errors) || !string.IsNullOrEmpty(outw.Errors))
+                {
+                    string errMsg = "Critical errors found during the execution of : " + ExeName + " " +
+                                    CommandLine + ":" + Environment.NewLine;
+                    errMsg += err.Errors;
+                    errMsg += outw.Errors;
+                    if (ResultProperty != null)
+                    {
+                        Properties[ResultProperty] = FailedExitCode.ToString();
+                    }
+                    throw new BuildException(errMsg, theEx);
+
+                }
+                else if (theEx != null)
+                {
+                    throw new BuildException("UnKnown Build Error:", theEx);
+                }
+
+            }
+
 
 
         }

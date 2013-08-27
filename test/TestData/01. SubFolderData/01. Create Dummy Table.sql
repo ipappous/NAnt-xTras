@@ -1,4 +1,5 @@
--- Create tablecreate table dummy
+-- Create table
+create table dummy
 (
   id       number(38),
   dummyint number(38),

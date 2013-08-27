@@ -4,11 +4,12 @@ using System.IO;
 using System.Text;
 using System.Xml;
 using System.Globalization;
-
+using NAntxTras.Tests.Utils;
 using NUnit.Framework;
 using NAnt.Core;
 using Tests.NAnt.Core;
 using Tests.NAnt.Core.Util;
+using NantXtras.Utils;
 
 namespace NAntxTras.Tests.Tasks.Oracle
 {
@@ -18,8 +19,8 @@ namespace NAntxTras.Tests.Tasks.Oracle
     {
         private const string _validDbConnection = "EFSCR_NINJA/EFSCR_NINJA@EISP_PROD"; //scott/tiger@localhost
 
-        private const string _invalidDBConnection = "Demo/Dammy@dodo";
-
+        private const string _invalidDBConnection = "Demo/DUmmy@dodo";
+        
         private const string _format = @"<?xml version='1.0' ?>
             <project>
            		<sqlplus  dbconnection= '{0}' {1} resultproperty='sqlPlusResult'  debug='{2}' failonerror='{3}' >
@@ -33,7 +34,7 @@ namespace NAntxTras.Tests.Tasks.Oracle
         public void Test_Debug()
         {
             string result = "";
-            CopyDataToTemp();
+            TestUtils.CopyDataToTemp(TempDirName);
             result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "true", "false", ""));
         }
 
@@ -43,7 +44,7 @@ namespace NAntxTras.Tests.Tasks.Oracle
         public void Test_Command_File_Creation_For_WorkingDir()
         {
             string result = "";
-            CopyDataToTemp();
+            TestUtils.CopyDataToTemp(TempDirName);
             result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "true", "false", ""));
             Assert.IsTrue(result.IndexOf("01. CreateTable.sql") != -1,
                           "Could not Create command file for batch script execution.");
@@ -175,7 +176,7 @@ end;
         public void Test_Directory_Script_Execution()
         {
             string result = "";
-            CopyDataToTemp();
+            TestUtils.CopyDataToTemp(TempDirName);
             result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "false", "true", ""));
             Assert.IsTrue(result.IndexOf("01. CreateTable.sql") != -1,
                           "scripts should be ran.");
@@ -187,7 +188,7 @@ end;
             string result = "";
             string nested =
 @"<includeerrorpattern pattern='ora-'/>";
-            CopyDataToTemp();
+            TestUtils.CopyDataToTemp(TempDirName);
             result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "false", "false", nested));
             Assert.IsTrue(result.IndexOf("Critical errors found during the execution") != -1,
                           "scripts should fail");
@@ -203,7 +204,7 @@ end;
             string nested =
 @"<includeerrorpattern pattern='ora-'/>
   <excludeerrorpattern pattern='ora-00955'/>";
-            CopyDataToTemp();
+            TestUtils.CopyDataToTemp(TempDirName);
             result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "false", "false", nested));
             Assert.IsFalse(result.IndexOf("Critical errors found during the execution") != -1,
                           "scripts should run");
@@ -225,7 +226,7 @@ end;
 				<exclude name='**\*Dummy*'/>
 			</fileset>
 ";
-            CopyDataToTemp();
+            TestUtils.CopyDataToTemp(TempDirName);
             result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "true", "false", nested));
             Assert.IsFalse(result.IndexOf("Dummy") != -1,
                           "should exclude Dummy files");
@@ -245,11 +246,13 @@ end;
 				<exclude name='**\*Dummy*'/>
 			</fileset>
 ";
-            CopyDataToTemp();
+            TestUtils.CopyDataToTemp(TempDirName);
             result = RunBuild(FormatBuildFile(_validDbConnection, "workingdir='TestData'", "false", "false", nested));
             Assert.IsFalse(result.IndexOf("Dummy") != -1,
                           "should exclude Dummy files");
         }
+
+
 
         private string FormatBuildFile(string dbconnection, string workDir, string debug, string failonerror,
                                        string nestedElements)
@@ -257,23 +260,6 @@ end;
             return String.Format(CultureInfo.InvariantCulture, _format, dbconnection, workDir, debug, failonerror,
                                  nestedElements);
         }
-
-
-        private static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
-        {
-            foreach (DirectoryInfo dir in source.GetDirectories())
-                CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
-            foreach (FileInfo file in source.GetFiles())
-                file.CopyTo(Path.Combine(target.FullName, file.Name));
-        }
-
-        private void CopyDataToTemp()
-        {
-            var target = new DirectoryInfo(TempDirName);
-            var root = target.CreateSubdirectory("TestData");
-            CopyFilesRecursively(new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory + "\\TestData"), root);
-        }
-
 
 
     }

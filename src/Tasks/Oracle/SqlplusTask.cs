@@ -245,10 +245,9 @@ quit;";
         {
             base.Initialize();
 
-
+            _execMode = execMode.None;
             if (!WorkingDirectory.Exists)
             {
-                _execMode =execMode.None;
                 return;
             }
 
@@ -275,7 +274,7 @@ quit;";
                     fset.BaseDirectory = WorkingDirectory;
                     fset.Includes.Add(@"**\*.sql");
                     fset.Includes.Add(@"**\*.prc");
-                    fset.Includes.Add(@"**\*.pkg");
+                    fset.Includes.Add(@"**\*.pck");
                     _execMode = SqlplusTask.execMode.Directory;
 
                 }
@@ -343,7 +342,17 @@ quit;";
                         Log(Level.Info, Environment.NewLine + "Debug mode, the inline script converted to the following file:");
                         Log(Level.Info, TempSQLFile);
                         break;
-                   default:
+                    case execMode.None:
+                        if (this.FailOnError)
+                        {
+                            throw new BuildException("There is nothing to execute!!! in:" + WorkingDirectory);
+                        }
+                        else
+                        {
+                            Log(Level.Error, Environment.NewLine + "Debug mode, There is nothing to execute!!! in:" + WorkingDirectory);
+                        }
+                        break;
+                    default:
                         throw new ArgumentOutOfRangeException();
                 }
                 if (ResultProperty != null)
@@ -355,7 +364,14 @@ quit;";
 
             if (_execMode == execMode.None)
             {
-                throw new BuildException("There is nothing to execute!!!");
+                if (this.FailOnError)
+                {
+                    throw new BuildException("There is nothing to execute!!! in:" + WorkingDirectory);
+                }
+                else
+                {
+                    Log(Level.Error, Environment.NewLine + "There is nothing to execute!!! in:" + WorkingDirectory);
+                }
             }
 
             try

@@ -45,6 +45,7 @@ namespace NantXtras.Tasks.Abstract
         public class ExcludeError : Element
         {
             private string _pattern;
+            private bool _ifDefined = true;
 
             /// <summary>
             /// The pattern or file name to exclude.
@@ -55,6 +56,18 @@ namespace NantXtras.Tasks.Abstract
             {
                 get { return _pattern; }
                 set { _pattern = value; }
+            }
+
+            /// <summary>
+            /// If <see langword="true" /> then the patterns will be excluded; 
+            /// otherwise, skipped. The default is <see langword="true" />.
+            /// </summary>
+            [TaskAttribute("if")]
+            [BooleanValidator()]
+            public virtual bool IfDefined
+            {
+                get { return _ifDefined; }
+                set { _ifDefined = value; }
             }
 
         }
@@ -70,7 +83,10 @@ namespace NantXtras.Tasks.Abstract
             {
                 foreach (IncludeError includeErrorPattern in value)
                 {
-                    _includeErrorPatterns.Add(includeErrorPattern.Pattern);
+                    if (includeErrorPattern.IfDefined)
+                    {
+                        _includeErrorPatterns.Add(includeErrorPattern.Pattern);
+                    }
                 }
             }
 
@@ -83,7 +99,10 @@ namespace NantXtras.Tasks.Abstract
             {
                 foreach (ExcludeError excludeErrorPattern in value)
                 {
-                    _excludeErrorPatterns.Add(excludeErrorPattern.Pattern);
+                    if (excludeErrorPattern.IfDefined)
+                    {
+                        _excludeErrorPatterns.Add(excludeErrorPattern.Pattern);
+                    }
                 }
             }
         }
